@@ -125,7 +125,7 @@ aethism.create_corp()
 
 bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['51060']['frequencies'])
 bag_aethism.create_sentence_vectors()
-bag_aethism.plot_vectors()
+#bag_aethism.plot_vectors()
 
 TFIDF_aethism = TFIDF(aethism.corpus, aethism.word_freq_dict)
 TFIDF_aethism.compute_tfidf()
