@@ -10,7 +10,7 @@ import os
 import math
 
 NUMBER_OF_WORDS = 200
-PATH_TO_NEWS_GROUP = 'C:\\Users\\haleyweinstein\\Documents\\20_newsgroups'
+PATH_TO_NEWS_GROUP = 'C:\\Users\\l\\Desktop\\Data Vis\\midterm\\20_newsgroups'
 
 
 class TotalCorp(object):
@@ -19,7 +19,7 @@ class TotalCorp(object):
         self.folder = folder_name
         self.corpus = []
         self.word_freq_dict = {}
-        self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+')  # drops everything except alphanumeric characters
+        self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+') # drops everything except alphanumeric characters
         self.total_words = 0
         self.break_at = b
 
@@ -37,7 +37,7 @@ class TotalCorp(object):
         total_words = 0
         for idx, cor in enumerate(self.corpus):
             self.corpus[idx] = cor.lower().replace("_", "")
-            tokens = self.tokenizer.tokenize(cor.lower().replace("_", ""))
+            tokens = self.tokenizer.tokenize(self.corpus[idx])
 
             for token in tokens:
                 if token not in freq_dict.keys():
@@ -89,7 +89,7 @@ class TFIDF(object):
         self.word_instances = {}
 
     def compute_tf(self):
-        "Frequency of term in doc/ total number of terms in the doc"
+        """Frequency of term in doc/ total number of terms in the doc"""
         for k in self.wordfreq.keys():
             self.tf_scores[k] = {}
             for k2 in self.wordfreq[k]['frequencies'].keys():  # k2 = word name
@@ -108,10 +108,10 @@ class TFIDF(object):
                     self.tfidf_scores[k][k2] = self.tf_scores[k][k2] * math.log(total_docs / self.word_instances[k2])
                 else:
                     self.tfidf_scores[k][k2] = self.tf_scores[k][k2] * math.log(
-                        total_docs / self.find_total_occurances(k2))
+                        total_docs / self.find_total_occurrences(k2))
 
-    def find_total_occurances(self, word):
-        instance = 1
+    def find_total_occurrences(self, word):
+        instance = 0
         for k in self.wordfreq.keys():
             if word in self.wordfreq[k]['frequencies'].keys():
                 instance += 1
@@ -125,7 +125,7 @@ aethism.create_corp()
 
 bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['51060']['frequencies'])
 bag_aethism.create_sentence_vectors()
-bag_aethism.plot_vectors()
+#bag_aethism.plot_vectors()
 
 TFIDF_aethism = TFIDF(aethism.corpus, aethism.word_freq_dict)
 TFIDF_aethism.compute_tfidf()
