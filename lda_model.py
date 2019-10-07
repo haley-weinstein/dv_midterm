@@ -1,3 +1,8 @@
+"""
+Author: Liam
+Description: Make an LDA and do some stuff with it
+Based on tutorial at: https://www.machinelearningplus.com/nlp/topic-modeling-gensim-python/
+"""
 
 # -----------------------------------------------------------------
 #                        Import Packages
@@ -39,6 +44,7 @@ from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 
+"""
 # -----------------------------------------------------------------
 #                         Import Dataset
 # -----------------------------------------------------------------
@@ -72,6 +78,9 @@ def sent_to_words(sentences):
 
 
 data_words = list(sent_to_words(data))
+"""
+from pre_process import aethism
+data_words = aethism.corpus
 
 # -----------------------------------------------------------------
 #                Build bigram and trigram models
@@ -146,7 +155,7 @@ corpus = [id2word.doc2bow(text) for text in texts]
 # Build LDA model
 lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
                                            id2word=id2word,
-                                           num_topics=20,
+                                           num_topics=7,
                                            random_state=100,
                                            update_every=1,
                                            chunksize=100,
@@ -157,22 +166,76 @@ lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
 # -----------------------------------------------------------------
 #                  Visualize LDA Topics
 # -----------------------------------------------------------------
+def main():
 
-# Print the Keyword in the 10 topics
-pprint(lda_model.print_topics())
-doc_lda = lda_model[corpus]
+    # Print the Keywords in the topics
+    pprint(lda_model.print_topics())
+    doc_lda = lda_model[corpus]
 
-# Compute Perplexity
-print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
+    # # Compute Perplexity
+    # print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
+    #
+    # Compute Coherence Score
+    # coherence_model_lda = CoherenceModel(model=lda_model, texts=data_lemmatized, dictionary=id2word, coherence='c_v')
+    # coherence_lda = coherence_model_lda.get_coherence()
+    # print('\nCoherence Score: ', coherence_lda)
 
-# Compute Coherence Score
-coherence_model_lda = CoherenceModel(model=lda_model, texts=data_lemmatized, dictionary=id2word, coherence='c_v')
-coherence_lda = coherence_model_lda.get_coherence()
-print('\nCoherence Score: ', coherence_lda)
+    # #pyLDAvis.enable_notebook()
+    # vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
+    # pyLDAvis.save_html(vis, 'LDA_Visualization.html')
+    # #vis
+
+# Wrap this part in main because windows throws a runtime error because of the way genesism uses threads
+if __name__ == "__main__":
+    main()
+
+# -----------------------------------------------------------------
+#                  Topic Distribution
+# -----------------------------------------------------------------
+def format_topics_sentences(ldamodel=lda_model, corpus=corpus, texts=data_words):
+    # Init output
+    sent_topics_df = pd.DataFrame()
+
+    # Get main topic in each document
+    for i, row in enumerate(ldamodel[corpus]):
+        row = sorted(row, key=lambda x: (x[1]), reverse=True)
+        # Get the Dominant topic, Perc Contribution and Keywords for each document
+        for j, (topic_num, prop_topic) in enumerate(row):
+            if j == 0:  # => dominant topic
+                wp = ldamodel.show_topic(topic_num)
+                topic_keywords = ", ".join([word for word, prop in wp])
+                sent_topics_df = sent_topics_df.append(
+                    pd.Series([int(topic_num), round(prop_topic, 4), topic_keywords]), ignore_index=True)
+            else:
+                break
+    sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
+
+    # Add original text to the end of the output
+    contents = pd.Series(texts)
+    sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
+    return (sent_topics_df)
+
+df_topic_sents_keywords = format_topics_sentences(ldamodel=lda_model, corpus=corpus, texts=data_words)
 
 
+# ------------------------------------------------------------------------------
 
-# pyLDAvis.enable_notebook()
-# vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
-# vis
+# Number of Documents for Each Topic
+topic_counts = df_topic_sents_keywords['Dominant_Topic'].value_counts()
+
+# Percentage of Documents for Each Topic
+topic_contribution = round(topic_counts/topic_counts.sum(), 4)
+
+# Topic Number and Keywords
+topic_num_keywords = df_topic_sents_keywords[['Dominant_Topic', 'Topic_Keywords']]
+
+# Concatenate Column wise
+df_dominant_topics = pd.concat([topic_num_keywords, topic_counts, topic_contribution], axis=1)
+
+# Change Column names
+df_dominant_topics.columns = ['Dominant_Topic', 'Topic_Keywords', 'Num_Documents', 'Perc_Documents']
+
+# Show
+df_dominant_topics
+
 

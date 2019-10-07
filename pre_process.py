@@ -8,9 +8,9 @@ import os
 PATH_TO_NEWS_GROUP = 'C:\\Users\\l\\Desktop\\Data Vis\\midterm\\20_newsgroups'
 
 class TotalCorp(object):
-    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_name='alt.atheism', b='51174'):
+    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_names={'alt.atheism'}, b='51174'):
         self.p = path_to_news_group
-        self.folder = folder_name
+        self.folders = folder_names
         self.corpus = []
         self.word_freq_dict = {}
         self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+') # drops everything except alphanumeric characters
@@ -18,13 +18,16 @@ class TotalCorp(object):
         self.break_at = b
 
     def create_corp(self):
-        for f in os.listdir(os.path.join(self.p, self.folder)):
-            a = open(os.path.join(self.p, self.folder, f), 'r')
-            self.corpus = self.corpus + (nltk.sent_tokenize(a.read()))
-            self.word_freq_dict[f] = {}
-            self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'] = self.find_frequency()
-            if str(f) == self.break_at:  # it takes a really fucking long time to run so I j did this
-                break
+        for folder in os.listdir(self.p):
+            if folder not in self.folders and len(self.folders) > 0:
+                continue
+            for file in os.listdir(os.path.join(self.p, folder)):
+                a = open(os.path.join(self.p, folder, file), 'r')
+                self.corpus = self.corpus + (nltk.sent_tokenize(a.read()))
+                self.word_freq_dict[file] = {}
+                self.word_freq_dict[file]['frequencies'], self.word_freq_dict[file]['total_words'] = self.find_frequency()
+                if str(file) == self.break_at:  # it takes a really fucking long time to run so I j did this
+                    break
 
     def find_frequency(self):
         freq_dict = {}
@@ -43,5 +46,5 @@ class TotalCorp(object):
         # print("example of processed token:{}".format(tokens))  # prints example of word tokens can be taken out later
         return freq_dict, total_words
 
-aethism = TotalCorp()
+aethism = TotalCorp(b='dont break sir')
 aethism.create_corp()
