@@ -10,7 +10,7 @@ import os
 import math
 
 NUMBER_OF_WORDS = 200
-PATH_TO_NEWS_GROUP = 'C:\\Users\\l\\Desktop\\Data Vis\\midterm\\20_newsgroups'
+PATH_TO_NEWS_GROUP = 'C:\\Users\\Zacha\\Desktop\\20_newsgroups'
 
 
 class TotalCorp(object):
@@ -22,18 +22,21 @@ class TotalCorp(object):
         self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+') # drops everything except alphanumeric characters
         self.total_words = 0
         self.break_at = b
+        self.word_dict = {}
 
     def create_corp(self):
         for f in os.listdir(os.path.join(self.p, self.folder)):
             a = open(os.path.join(self.p, self.folder, f), 'r')
             self.corpus = self.corpus + (nltk.sent_tokenize(a.read()))
             self.word_freq_dict[f] = {}
-            self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'] = self.find_frequency()
+            self.word_dict[f] = []
+            self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'], self.word_dict[f] = self.find_frequency()
             if str(f) == self.break_at:  # it takes a really fucking long time to run so I j did this
                 break
 
     def find_frequency(self):
         freq_dict = {}
+        word_dict = []
         total_words = 0
         for idx, cor in enumerate(self.corpus):
             self.corpus[idx] = cor.lower().replace("_", "")
@@ -45,9 +48,10 @@ class TotalCorp(object):
                 else:
                     freq_dict[token] += 1
                 total_words += 1
+                word_dict.append(token)
 
         # print("example of processed token:{}".format(tokens))  # prints example of word tokens can be taken out later
-        return freq_dict, total_words
+        return freq_dict, total_words, word_dict
 
 
 class BagOfWords(object):
@@ -125,7 +129,9 @@ aethism.create_corp()
 
 bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['51060']['frequencies'])
 bag_aethism.create_sentence_vectors()
-#bag_aethism.plot_vectors()
+# bag_aethism.plot_vectors()
 
 TFIDF_aethism = TFIDF(aethism.corpus, aethism.word_freq_dict)
 TFIDF_aethism.compute_tfidf()
+
+
