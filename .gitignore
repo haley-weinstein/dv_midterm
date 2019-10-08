@@ -1,1 +1,5 @@
 .idea/
+*.p
+*.yml
+pickles/
+__pycache__/

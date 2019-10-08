@@ -8,50 +8,99 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as c
 import os
 import math
+from nltk.stem import WordNetLemmatizer
+import re
+from nltk.corpus import stopwords
+from wordcloud import WordCloud
+import json
+import zlib
+import base64
+import pickle
+
+ZIPJSON_KEY = 'base64(zip(o))'
+
+
+def json_zip(j, fp):
+    j = {
+        ZIPJSON_KEY: base64.b64encode(
+            zlib.compress(
+                json.dump((j).encode('utf-8'), fp)
+            )
+        ).decode('ascii')
+    }
+
+    return j
+
 
 NUMBER_OF_WORDS = 200
-PATH_TO_NEWS_GROUP = 'C:\\Users\\Zacha\\Desktop\\20_newsgroups'
+PATH_TO_NEWS_GROUP = 'C:\\Users\\haleyweinstein\\Documents\\20_newsgroups'
 
 
 class TotalCorp(object):
-    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_name='alt.atheism', b='51174'):
+    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_name='alt.atheism', b='51174', lemma=False):
         self.p = path_to_news_group
         self.folder = folder_name
         self.corpus = []
         self.word_freq_dict = {}
-        self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+') # drops everything except alphanumeric characters
+        self.lemmatizer = WordNetLemmatizer()
+        self.lemma = lemma
+        self.tokenizer = nltk.tokenize.RegexpTokenizer(r'\w+')  # drops everything except alphanumeric characters
         self.total_words = 0
         self.break_at = b
         self.word_dict = {}
 
     def create_corp(self):
-        for f in os.listdir(os.path.join(self.p, self.folder)):
+        total_documents = len(os.listdir(os.path.join(self.p, self.folder)))
+        for idx, f in enumerate(os.listdir(os.path.join(self.p, self.folder))):
+            print("{}_{}".format(idx, total_documents))
             a = open(os.path.join(self.p, self.folder, f), 'r')
             self.corpus = self.corpus + (nltk.sent_tokenize(a.read()))
             self.word_freq_dict[f] = {}
             self.word_dict[f] = []
-            self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'], self.word_dict[f] = self.find_frequency()
+            self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'], self.word_freq_dict[
+                f]['comma_seperated_words'], self.word_freq_dict[f]['sentence_vectors'] = self.find_frequency()
+            # _, _, _, self.word_freq_dict[f]['sentence)vectors'] = self.find_frequency()
             if str(f) == self.break_at:  # it takes a really fucking long time to run so I j did this
                 break
+
+    def save(self):
+        print("SAVING CORP")
+        if self.lemma:
+            pickle.dump(self.word_freq_dict, open("{}_{}.p".format("NO_LEMMA", self.folder), "wb"))
+        else:
+            pickle.dump(self.word_freq_dict, open("{}_{}.p".format("NO_LEMMA", self.folder), "wb"))
 
     def find_frequency(self):
         freq_dict = {}
         word_dict = []
         total_words = 0
+        sentence_vecs = []
         for idx, cor in enumerate(self.corpus):
             self.corpus[idx] = cor.lower().replace("_", "")
             tokens = self.tokenizer.tokenize(self.corpus[idx])
+            tokens = [re.sub('\S*@\S*\s?', '', sent) for sent in tokens]
+            tokens = [re.sub('\s+', ' ', sent) for sent in tokens]
+            tokens = [re.sub("\'", "", sent) for sent in tokens]
 
+            if self.lemma:
+                stop_words = set(stopwords.words('english'))
+                tokens = [w for w in tokens if not w in stop_words]
+            tokens_ = []
             for token in tokens:
+                if self.lemma:
+                    token = self.lemmatizer.lemmatize(token)
+
                 if token not in freq_dict.keys():
                     freq_dict[token] = 1
                 else:
                     freq_dict[token] += 1
                 total_words += 1
                 word_dict.append(token)
+                tokens_.append(token)
+            sentence_vecs.append(tokens_)
 
         # print("example of processed token:{}".format(tokens))  # prints example of word tokens can be taken out later
-        return freq_dict, total_words, word_dict
+        return freq_dict, total_words, word_dict, sentence_vecs
 
 
 class BagOfWords(object):
@@ -124,14 +173,22 @@ class TFIDF(object):
         return instance
 
 
-aethism = TotalCorp()
-aethism.create_corp()
+"""
+for c in os.listdir(PATH_TO_NEWS_GROUP):
+    print(c)
+    corp = TotalCorp(lemma=False, folder_name=c, b='')
+    corp.create_corp()
+    corp.save()
 
+
+wordcloud = WordCloud()
+wordcloud.generate_from_frequencies(aethism.word_freq_dict['51060']['frequencies'])
+plt.imshow(wordcloud)
+plt.axis("off")
+plt.show()
 bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['51060']['frequencies'])
 bag_aethism.create_sentence_vectors()
-# bag_aethism.plot_vectors()
 
 TFIDF_aethism = TFIDF(aethism.corpus, aethism.word_freq_dict)
 TFIDF_aethism.compute_tfidf()
-
-
+"""
