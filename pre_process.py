@@ -26,8 +26,8 @@ class TotalCorp(object):
                 a = open(os.path.join(self.p, folder, file), 'r')
                 self.corpus = self.corpus + (nltk.sent_tokenize(a.read()))
                 self.word_freq_dict[file] = {}
-                self.word_dict = []
-                self.word_freq_dict[file]['frequencies'], self.word_freq_dict[file]['total_words'] = self.find_frequency()
+                self.word_dict[file] = []
+                self.word_freq_dict[file]['frequencies'], self.word_freq_dict[file]['total_words'], self.word_dict[file] = self.find_frequency()
                 if str(file) == self.break_at:  # it takes a really fucking long time to run so I j did this
                     break
 
