@@ -8,7 +8,7 @@ import gensim
 def create_tagged_documents(dict_of_list_of_words):
     documents = []
     for fn, doc in dict_of_list_of_words.items():
-        documents.append(gensim.models.doc2vec.TaggedDocument(doc, [fn]))
+        documents.append(gensim.models.doc2vec.TaggedDocument(doc, [int(fn)]))
 
     return documents
 
