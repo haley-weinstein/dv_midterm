@@ -1,6 +1,7 @@
 """
 Author: Hayle
 Description: Preprocess some shit idk
+fuck this I put EFFORT in but guess we will j b sheeple who use tutorials
 """
 import nltk
 import heapq
@@ -173,6 +174,11 @@ class TFIDF(object):
         return instance
 
 
+aethism = TotalCorp()
+aethism.create_corp()
+
+bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['comma_seperated_words'])
+bag_aethism.create_sentence_vectors()
 """
 for c in os.listdir(PATH_TO_NEWS_GROUP):
     print(c)
