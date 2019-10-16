@@ -4,83 +4,150 @@ from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from sklearn.cluster import KMeans
 from sklearn import metrics
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.metrics import confusion_matrix
-from sklearn.naive_bayes import MultinomialNB
+import re
 
 CATEGORIES = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
 
 
-class LemmaTokenizer(object):
-    def __init__(self):
-        self.wnl = WordNetLemmatizer()
-
-    def __call__(self, articles):
-        return [self.wnl.lemmatize(t) for t in word_tokenize(articles)]
-
-
 def fetch_data(categories=CATEGORIES):
+    """fetchs the 20 news group training and test data
+    Args:
+        categories (list): list of categories to fetch
+    """
     twenty_train = fetch_20newsgroups(subset='train', categories=categories)
     twenty_test = fetch_20newsgroups(subset='test', categories=categories)
 
     return twenty_train, twenty_test
 
 
-def create_vocabularies(twenty_train, twenty_test):
+WNL = WordNetLemmatizer()
+
+
+def l(text):
+    """lemmatize text. Does not work rn creates a list instead of the correct data
+    args:
+    text (string): the text from which to lemmatize"""
+    return [WNL.lemmatize(t) for t in word_tokenize(text)]
+
+
+def strip_newsgroup_header(text):
+    """
+    Given text in "news" format, strip the headers, by removing everything
+    before the first blank line.
+    Parameters
+    ----------
+    text : string
+        The text from which to remove the signature block.
+    """
+    _before, _blankline, after = text.partition('\n\n')
+    return after
+
+
+_QUOTE_RE = re.compile(r'(writes in|writes:|wrote:|says:|said:'
+                       r'|^In article|^Quoted from|^\||^>)')
+
+
+def strip_newsgroup_quoting(text):
+    """
+    Given text in "news" format, strip lines beginning with the quote
+    characters > or |, plus lines that often introduce a quoted section
+    (for example, because they contain the string 'writes:'.)
+    Parameters
+    ----------
+    text : string
+        The text from which to remove the signature block.
+    """
+    good_lines = [line for line in text.split('\n')
+                  if not _QUOTE_RE.search(line)]
+    return '\n'.join(good_lines)
+
+
+def strip_newsgroup_footer(text):
+    """
+    Given text in "news" format, attempt to remove a signature block.
+    As a rough heuristic, we assume that signatures are set apart by either
+    a blank line or a line made of hyphens, and that it is the last such line
+    in the file (disregarding blank lines at the end).
+    Parameters
+    ----------
+    text : string
+        The text from which to remove the signature block.
+    """
+    lines = text.strip().split('\n')
+    for line_num in range(len(lines) - 1, -1, -1):
+        line = lines[line_num]
+        if line.strip().strip('-') == '':
+            break
+
+    if line_num > 0:
+        return '\n'.join(lines[:line_num])
+    else:
+        return text
+
+
+def create_vocab1(data):
+    """creates vocabulary one with stripped header footer and quoting and hopefully lemmatizing in the future
+    Args (obj): 20newsgroup data
+    """
+    data.data = [strip_newsgroup_header(text) for text in data.data]
+    data.data = [strip_newsgroup_footer(text) for text in data.data]
+    data.data = [strip_newsgroup_quoting(text) for text in data.data]
+    # data.data = [l(text) for text in data.data]
+    return data
+
+
+def create_vocabularies_BOW(data):
+    """Bag of Words model
+    Args:
+        data (obj): 20newsgroup object
+    """
     count_vect_1 = CountVectorizer()  # vocabulary 1
-    count_vect_2 = CountVectorizer(tokenizer=LemmaTokenizer(),
-                                   strip_accents='unicode',
-                                   lowercase=True,
-                                   token_pattern=r'\b[a-zA-Z]{3,}\b')  # keeps words of 3 or more characters) # vocabulary 2
+    X = count_vect_1.fit_transform(data.data)
 
-    X_train_counts_1 = count_vect_1.fit_transform(twenty_train.data)
-    X_train_counts_2 = count_vect_2.fit_transform(twenty_train.data)
-
-    X_test_counts_1 = count_vect_1.fit_transform(twenty_test.data)
-    X_test_counts_2 = count_vect_2.fit_transform(twenty_test.data)
-
-    return X_train_counts_1, X_train_counts_2, X_test_counts_1, X_test_counts_2
-
-
-def create_vocabularies_tfidf(twenty_train, twenty_test):
-    vectorizer = TfidfVectorizer(max_df=0.5,
-                                 min_df=2, stop_words='english',
-                                 use_idf=True)
-    X = vectorizer.fit_transform(twenty_train.data)
     return X
 
 
-def cluster(X, number_of_categories):
-    kmeansc = KMeans(n_clusters=number_of_categories, init='k-means++', max_iter=100, n_init=1)
-    kmeansc.fit(X)
-    return kmeansc
+def create_vocabularies_tfidf(data):
+    """TFIDF model
+    Args:
+        data (obj): 20newsgroup object
+    """
+    vectorizer = TfidfVectorizer()
+    X = vectorizer.fit_transform(data.data)
+    return X
 
 
+def cluster(X, number_of_categories, data, name):
+    """Performs k means clustering and prints homogeneity completeness and v measure
+    Args:
+        X (data): modeled data
+        number_of_categories (int): number of clusters or categories to create
+        data (obj): 20newsgroup object
+        name (string): name to print out
+    """
+    km = KMeans(n_clusters=number_of_categories, init='k-means++', max_iter=100, n_init=1)
+    km.fit(X)
+    print(name)
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(data.target, km.labels_))
+    print("Completeness: %0.3f" % metrics.completeness_score(data.target, km.labels_))
+    print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
+
+
+#EXAMPLE:
 train, test = fetch_data()
+vocab1 = create_vocab1(train)
+bow = create_vocabularies_BOW(vocab1)
+cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
 
-print("TFIDF: \n")
-X_ = create_vocabularies_tfidf(train, test)
-km = cluster(X_, len(CATEGORIES))
-print("Homogeneity: %0.3f" % metrics.homogeneity_score(train.target, km.labels_))
-print("Completeness: %0.3f" % metrics.completeness_score(train.target, km.labels_))
-print("V-measure: %0.3f" % metrics.v_measure_score(train.target, km.labels_))
+bow2 = create_vocabularies_BOW(train)
+cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
-print("BOW 1\n")
-X_, X_2, _, _ = create_vocabularies(train, test)
-km = cluster(X_, len(CATEGORIES))
-print("Homogeneity: %0.3f" % metrics.homogeneity_score(train.target, km.labels_))
-print("Completeness: %0.3f" % metrics.completeness_score(train.target, km.labels_))
-print("V-measure: %0.3f" % metrics.v_measure_score(train.target, km.labels_))
-print("BOW 2\n")
-km = cluster(X_2, len(CATEGORIES))
-print("Homogeneity: %0.3f" % metrics.homogeneity_score(train.target, km.labels_))
-print("Completeness: %0.3f" % metrics.completeness_score(train.target, km.labels_))
-print("V-measure: %0.3f" % metrics.v_measure_score(train.target, km.labels_))
+tf_idf = create_vocabularies_tfidf(vocab1)
+cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
+tf_idf2 = create_vocabularies_tfidf(train)
+cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 """
 IGNORE THIS WAS TRYING SOMETHING DIDN'T REALLY WORK 
