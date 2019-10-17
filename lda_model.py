@@ -172,23 +172,23 @@ def main():
     pprint(lda_model.print_topics())
     doc_lda = lda_model[corpus]
 
-    # # Compute Perplexity
-    # print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
-    #
-    # Compute Coherence Score
-    # coherence_model_lda = CoherenceModel(model=lda_model, texts=data_lemmatized, dictionary=id2word, coherence='c_v')
-    # coherence_lda = coherence_model_lda.get_coherence()
-    # print('\nCoherence Score: ', coherence_lda)
+    # -- Compute Perplexity --
+    perplexity_lda = lda_model.log_perplexity(corpus)
+    print('\nPerplexity: ', perplexity_lda)  # a measure of how good the model is. lower the better.
 
-    # #pyLDAvis.enable_notebook()
-    # vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
-    # pyLDAvis.save_html(vis, 'LDA_Visualization.html')
-    # #vis
+    # -- Compute Coherence Score --
+    coherence_model_lda = CoherenceModel(model=lda_model, texts=data_lemmatized, dictionary=id2word, coherence='c_v')
+    coherence_lda = coherence_model_lda.get_coherence()
+    print('\nCoherence Score: ', coherence_lda)
+
+    # -- Make the LDA Jupiter visualization --
+    vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
+    pyLDAvis.save_html(vis, 'LDA_Visualization.html')
 
 # Wrap this part in main because windows throws a runtime error because of the way genesism uses threads
 if __name__ == "__main__":
     main()
-
+"""
 # -----------------------------------------------------------------
 #                  Topic Distribution
 # -----------------------------------------------------------------
@@ -239,3 +239,4 @@ df_dominant_topics.columns = ['Dominant_Topic', 'Topic_Keywords', 'Num_Documents
 df_dominant_topics
 
 
+"""
