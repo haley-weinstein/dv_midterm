@@ -137,16 +137,17 @@ def cluster(X, number_of_categories, data, name):
 #EXAMPLE:
 train, test = fetch_data()
 vocab1 = create_vocab1(train)
+vocab2 = train
 bow = create_vocabularies_BOW(vocab1)
 cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
 
-bow2 = create_vocabularies_BOW(train)
+bow2 = create_vocabularies_BOW(vocab2)
 cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
 tf_idf = create_vocabularies_tfidf(vocab1)
 cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
-tf_idf2 = create_vocabularies_tfidf(train)
+tf_idf2 = create_vocabularies_tfidf(vocab2)
 cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 """

@@ -25,6 +25,9 @@ import matplotlib.pyplot as plt
 
 # Enable logging for gensim - optional
 import logging
+
+from joining_the_sheeple import fetch_data, create_vocab1
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.ERROR)
 
 import warnings
@@ -39,6 +42,7 @@ from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 
+"""
 # -----------------------------------------------------------------
 #                         Import Dataset
 # -----------------------------------------------------------------
@@ -65,12 +69,12 @@ data = [re.sub("\'", "", sent) for sent in data]
 #                Tokenize words and Clean-up text
 # -----------------------------------------------------------------
 
-
+"""
 def sent_to_words(sentences):
     for sentence in sentences:
         yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
 
-
+"""
 data_words = list(sent_to_words(data))
 
 # -----------------------------------------------------------------
@@ -100,7 +104,6 @@ def make_trigrams(texts):
     return [trigram_mod[bigram_mod[doc]] for doc in texts]
 
 def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
-    """https://spacy.io/api/annotation"""
     texts_out = []
     for sent in texts:
         doc = nlp(" ".join(sent))
@@ -123,56 +126,76 @@ nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
 
 # Do lemmatization keeping only noun, adj, vb, adv
 data_lemmatized = lemmatization(data_words_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
-
+"""
 
 # -----------------------------------------------------------------
 #                  Create Dictionary and Corpus
 # -----------------------------------------------------------------
 
+def buildModel(data):
+    """
+    Builds the gensim lda_model with the given data
+    :return:
+    """
 
-# Create Dictionary
-id2word = corpora.Dictionary(data_lemmatized)
 
-# Create Corpus
-texts = data_lemmatized
+    # Create Dictionary
+    id2word = corpora.Dictionary(data)
 
-# Term Document Frequency
-corpus = [id2word.doc2bow(text) for text in texts]
+    # Create Corpus
+    texts = data
 
-# -----------------------------------------------------------------
-#                  Build LDA Model
-# -----------------------------------------------------------------
+    # Term Document Frequency
+    corpus = [id2word.doc2bow(text) for text in texts]
 
-# Build LDA model
-lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
-                                           id2word=id2word,
-                                           num_topics=20,
-                                           random_state=100,
-                                           update_every=1,
-                                           chunksize=100,
-                                           passes=10,
-                                           alpha='auto',
-                                           per_word_topics=True)
+    # -----------------------------------------------------------------
+    #                  Build LDA Model
+    # -----------------------------------------------------------------
+
+    # Build LDA model
+    lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
+                                               id2word=id2word,
+                                               num_topics=20,
+                                               random_state=100,
+                                               update_every=1,
+                                               chunksize=100,
+                                               passes=10,
+                                               alpha='auto',
+                                               per_word_topics=True)
+    return lda_model, corpus, id2word
 
 # -----------------------------------------------------------------
 #                  Visualize LDA Topics
 # -----------------------------------------------------------------
 
-# Print the Keyword in the 10 topics
-pprint(lda_model.print_topics())
-doc_lda = lda_model[corpus]
+def printLDAStats(lda_model, corpus):
+    """
+    Prints the stats of an lda model.
+    """
 
-# Compute Perplexity
-print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
+    # Print the Keyword in the 10 topics
+    pprint(lda_model.print_topics())
+    doc_lda = lda_model[corpus]
 
-# Compute Coherence Score
-coherence_model_lda = CoherenceModel(model=lda_model, texts=data_lemmatized, dictionary=id2word, coherence='c_v')
-coherence_lda = coherence_model_lda.get_coherence()
-print('\nCoherence Score: ', coherence_lda)
-
+    # Compute Perplexity
+    print('\nPerplexity: ', lda_model.log_perplexity(corpus))  # a measure of how good the model is. lower the better.
 
 
-# pyLDAvis.enable_notebook()
-# vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
-# vis
+def getLDACoherence(lda_model, data, id2word):
+    """
+    Builds an LDA coherence model from an lda and prints its value.
+    """
+    # Compute Coherence Score
+    coherence_model_lda = CoherenceModel(model=lda_model, texts=data, dictionary=id2word, coherence='c_v')
+    coherence_lda = coherence_model_lda.get_coherence()
+    print('\nCoherence Score: ', coherence_lda)
 
+
+
+if (__name__ == "__main__"):
+    data = list(sent_to_words(create_vocab1(fetch_data()[0]).data))
+    lda_model, corpus, id2word = buildModel(data)
+    printLDAStats(lda_model, corpus)
+
+    vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
+    pyLDAvis.save_html(vis, 'LDA_Visualization.html')
