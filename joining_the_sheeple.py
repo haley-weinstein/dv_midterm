@@ -133,22 +133,25 @@ def cluster(X, number_of_categories, data, name):
     print("Completeness: %0.3f" % metrics.completeness_score(data.target, km.labels_))
     print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
 
+def trainModels(vocab1, vocab2, train):
+    bow = create_vocabularies_BOW(vocab1)
+    cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
 
-#EXAMPLE:
-train, test = fetch_data()
-vocab1 = create_vocab1(train)
-vocab2 = train
-bow = create_vocabularies_BOW(vocab1)
-cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
+    bow2 = create_vocabularies_BOW(vocab2)
+    cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
-bow2 = create_vocabularies_BOW(vocab2)
-cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+    tf_idf = create_vocabularies_tfidf(vocab1)
+    cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
-tf_idf = create_vocabularies_tfidf(vocab1)
-cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+    tf_idf2 = create_vocabularies_tfidf(vocab2)
+    cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-tf_idf2 = create_vocabularies_tfidf(vocab2)
-cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
+if (__name__ == "__main__"):
+    # EXAMPLE:
+    train, test = fetch_data()
+    vocab1 = create_vocab1(train)
+    vocab2 = train
+    trainModels(vocab1, vocab2, train)
 
 """
 IGNORE THIS WAS TRYING SOMETHING DIDN'T REALLY WORK 
