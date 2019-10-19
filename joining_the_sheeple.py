@@ -11,11 +11,15 @@ from sklearn.naive_bayes import MultinomialNB
 import time
 from wordcloud import WordCloud, STOPWORDS
 import numpy as np
+from sklearn.metrics.cluster import normalized_mutual_info_score
 from sklearn.utils.multiclass import unique_labels
 
 from sklearn.metrics import confusion_matrix
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def plot_confusion_matrix(y_true, y_pred,
@@ -34,6 +38,7 @@ def plot_confusion_matrix(y_true, y_pred,
 
     # Compute confusion matrix
     cm = confusion_matrix(y_true, y_pred)
+    labels = ['Religion', 'Comp', 'Rec', 'Science', 'Politics']
     # Only use the labels that appear in the data
 
     if normalize:
@@ -45,6 +50,7 @@ def plot_confusion_matrix(y_true, y_pred,
     print(cm)
 
     fig, ax = plt.subplots()
+    fig.tight_layout()
     im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
     ax.figure.colorbar(im, ax=ax)
     # We want to show all ticks...
@@ -55,6 +61,8 @@ def plot_confusion_matrix(y_true, y_pred,
            title=title,
            ylabel='True label',
            xlabel='Predicted label')
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
 
     # Rotate the tick labels and set their alignment.
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
@@ -68,7 +76,9 @@ def plot_confusion_matrix(y_true, y_pred,
             ax.text(j, i, format(cm[i, j], fmt),
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black")
-    fig.tight_layout()
+
+    plt.tight_layout()
+    plt.show()
     return ax
 
 
@@ -268,12 +278,10 @@ def cluster(X, number_of_categories, data, name):
         data (obj): 20newsgroup object
         name (string): name to print out
     """
-    km = KMeans(n_clusters=4, init='k-means++', max_iter=100, n_init=1)
+    km = KMeans(n_clusters=6, init='k-means++', max_iter=100, n_init=1)
     km.fit(X)
     print(name)
-    print("Homogeneity: %0.3f" % metrics.homogeneity_score(data.target, km.labels_))
-    print("Completeness: %0.3f" % metrics.completeness_score(data.target, km.labels_))
-    print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
+    print("NMI: %0.3f" % normalized_mutual_info_score(data.target, km.labels_))
 
 
 def train_(X_train, X_test, y_train, y_test):
@@ -288,42 +296,65 @@ def train_(X_train, X_test, y_train, y_test):
     return classifier
 
 
+def create_new_labels(labels):
+    new_labels = []
+    for c in labels:
+        if c == 0 or c == 19 or c == 15:
+            """religion"""
+            new_labels.append(1)
+        elif c <= 5 and c >= 1:
+            new_labels.append(2)
+        elif c >= 7 and c <= 10:
+            new_labels.append(4)
+        elif c >= 11 and c <= 14:
+            new_labels.append(5)
+        else:
+            new_labels.append(3)
+    return new_labels
+
+
 # EXAMPLE:
 def make_example(train, test):
     vocab2, vocab2_test = fetch_data()
-    print(dir(train))
     vocab1 = create_vocab1(train)
     vocab1_test = create_vocab1(test)
-    cluster_ = False
+    vocab2.target = create_new_labels(vocab2.target)
+    vocab1.target = create_new_labels(vocab1.target)
+    vocab2_test.target = create_new_labels(vocab2_test.target)
+    vocab1_test.target = create_new_labels(vocab1_test.target)
+    cluster_ = True
     if cluster_:
         # bow = create_vocabularies_BOW(vocab1)
         bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
 
         print('Multinomial Naive Bayes: BOW Vocab1')
         train_(bow, bow_test, vocab1.target, vocab1_test.target)
-        # cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
+        cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
         # bow2 = create_vocabularies_BOW(vocab2)
         bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
         print('Multinomial Naive Bayes: BOW Vocab2')
         train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
-        # cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+        cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
         tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
         print('Multinomial Naive Bayes: TFIDF Vocab1')
         train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
-        # cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+        cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
         tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
         print('Multinomial Naive Bayes: TFIDF Vocab2')
         train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
-        # cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
+        cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-        wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
-        plt.imshow(wordcloud)
-        wordcloud2 = WordCloud().generate_from_text(' '.join(vocab2.data[0:1000]))
-        plt.show()
-        plt.imshow(wordcloud2)
-        plt.show()
+
+def wordcloud(vocab1, vocab2):
+    wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
+    plt.imshow(wordcloud)
+    wordcloud2 = WordCloud().generate_from_text(' '.join(vocab2.data[0:1000]))
+    plt.show()
+    plt.imshow(wordcloud2)
+    plt.show()
+
 
 if (__name__ == '__main__'):
     train, test = fetch_data()
