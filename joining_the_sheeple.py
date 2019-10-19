@@ -276,9 +276,6 @@ def cluster(X, number_of_categories, data, name):
     print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
 
 
-train, test = fetch_data()
-
-
 def train_(X_train, X_test, y_train, y_test):
     start = time.time()
     classifier = MultinomialNB()
@@ -292,38 +289,42 @@ def train_(X_train, X_test, y_train, y_test):
 
 
 # EXAMPLE:
+def make_example(train, test):
+    vocab2, vocab2_test = fetch_data()
+    print(dir(train))
+    vocab1 = create_vocab1(train)
+    vocab1_test = create_vocab1(test)
+    cluster_ = False
+    if cluster_:
+        # bow = create_vocabularies_BOW(vocab1)
+        bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
 
-vocab2, vocab2_test = fetch_data()
-print(dir(train))
-vocab1 = create_vocab1(train)
-vocab1_test = create_vocab1(test)
-cluster_ = False
-if cluster_:
-    # bow = create_vocabularies_BOW(vocab1)
-    bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
+        print('Multinomial Naive Bayes: BOW Vocab1')
+        train_(bow, bow_test, vocab1.target, vocab1_test.target)
+        # cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
+        # bow2 = create_vocabularies_BOW(vocab2)
+        bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
+        print('Multinomial Naive Bayes: BOW Vocab2')
+        train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
+        # cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
-    print('Multinomial Naive Bayes: BOW Vocab1')
-    train_(bow, bow_test, vocab1.target, vocab1_test.target)
-    # cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
-    # bow2 = create_vocabularies_BOW(vocab2)
-    bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
-    print('Multinomial Naive Bayes: BOW Vocab2')
-    train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
-    # cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+        tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
+        print('Multinomial Naive Bayes: TFIDF Vocab1')
+        train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
+        # cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
-    tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
-    print('Multinomial Naive Bayes: TFIDF Vocab1')
-    train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
-    # cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+        tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
+        print('Multinomial Naive Bayes: TFIDF Vocab2')
+        train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
+        # cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-    tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
-    print('Multinomial Naive Bayes: TFIDF Vocab2')
-    train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
-    # cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
+        wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
+        plt.imshow(wordcloud)
+        wordcloud2 = WordCloud().generate_from_text(' '.join(vocab2.data[0:1000]))
+        plt.show()
+        plt.imshow(wordcloud2)
+        plt.show()
 
-    wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
-    plt.imshow(wordcloud)
-    wordcloud2 = WordCloud().generate_from_text(' '.join(vocab2.data[0:1000]))
-    plt.show()
-    plt.imshow(wordcloud2)
-    plt.show()
+if (__name__ == '__main__'):
+    train, test = fetch_data()
+    make_example(train, test)
