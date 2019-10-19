@@ -280,17 +280,19 @@ def makeWordsPerDocVisualization(df_dominant_topic, plotBreakup):
             df_dominant_topic_sub = df_dominant_topic.loc[df_dominant_topic.Dominant_Topic == idx, :]
             doc_lens = [len(d) for d in df_dominant_topic_sub.Text]
             ax.set(xlim=(0, 1000), xlabel='Document Word Count')
-            ax.set_ylabel('Number of Documents', color=cols[idx % len(cols)])
+            ax.set_ylabel('Number of Documents', color=cols[idx % len(cols)], fontsize=8)
             ax.tick_params(axis='y', labelcolor=cols[idx % len(cols)], color=cols[idx % len(cols)])
             ax.set_title('Topic: ' + str(idx), fontdict=dict(size=12, color=cols[idx % len(cols)]))
             ax.hist(doc_lens, bins=1000, color=cols[idx % len(cols)])
+            for n, label in enumerate(ax.xaxis.get_ticklabels()):
+                label.set_visible(False)
             if len(doc_lens) > 1:
                 sns.kdeplot(doc_lens, color="black", shade=False, ax=ax.twinx())
 
-        fig.tight_layout(pad=4, w_pad=4, h_pad=6)
         fig.subplots_adjust(top=0.90)
         plt.xticks(np.linspace(0, 1000, 9))
         fig.suptitle('Distribution of Document Word Counts by Dominant Topic', fontsize=16)
+        fig.tight_layout(pad=4, w_pad=4, h_pad=6)
         plt.show()
 
 
@@ -366,6 +368,7 @@ def makeWordWeightImportanceVisualization(lda_model, data, plotBreakup):
         fig.suptitle('Word Count and Importance of Topic Keywords', fontsize=16, y=1.05)
         plt.show()
 
+
 def sentences_chart(lda_model, corpus, start = 0, end = 13):
     corp = corpus[start:end]
     mycolors = [color for name, color in mcolors.TABLEAU_COLORS.items()]
@@ -376,33 +379,38 @@ def sentences_chart(lda_model, corpus, start = 0, end = 13):
         if i > 0:
             corp_cur = corp[i-1]
             topic_percs, wordid_topics, wordid_phivalues = lda_model[corp_cur]
-            word_dominanttopic = [(lda_model.id2word[wd], topic[0]) for wd, topic in wordid_topics]
-            ax.text(0.01, 0.5, "Doc " + str(i-1) + ": ", verticalalignment='center',
-                    fontsize=16, color='black', transform=ax.transAxes, fontweight=700)
+            word_dominanttopic = []
+            for wd, topic in wordid_topics:
+                if len(topic) > 0:
+                    word_dominanttopic.append((lda_model.id2word[wd], topic[0]))
 
-            # Draw Rectange
+            ax.text(0.01, 0.5, "Doc " + str(i-1) + ": ", verticalalignment='center',
+                    fontsize=10, color='black', transform=ax.transAxes, fontweight=700)
+
+            # Draw Rectangle
             topic_percs_sorted = sorted(topic_percs, key=lambda x: (x[1]), reverse=True)
             ax.add_patch(Rectangle((0.0, 0.05), 0.99, 0.90, fill=None, alpha=1,
                                    color=mycolors[topic_percs_sorted[0][0]], linewidth=2))
 
-            word_pos = 0.06
+            word_pos = 0.2
             for j, (word, topics) in enumerate(word_dominanttopic):
                 if j < 14:
                     ax.text(word_pos, 0.5, word,
                             horizontalalignment='left',
                             verticalalignment='center',
-                            fontsize=16, color=mycolors[topics],
+                            fontsize=10, color=mycolors[topics % len(mycolors)],
                             transform=ax.transAxes, fontweight=700)
-                    word_pos += .009 * len(word)  # to move the word for the next iter
+                    word_pos = round(word_pos + .025 * len(word), 3) # to move the word for the next iter
+
                     ax.axis('off')
             ax.text(word_pos, 0.5, '. . .',
                     horizontalalignment='left',
                     verticalalignment='center',
-                    fontsize=16, color='black',
+                    fontsize=10, color='black',
                     transform=ax.transAxes)
 
     plt.subplots_adjust(wspace=0, hspace=0)
-    plt.suptitle('Sentence Topic Coloring for Documents: ' + str(start) + ' to ' + str(end-2), fontsize=22, y=0.95, fontweight=700)
+    plt.suptitle('Sentence Topic Coloring for Documents: ' + str(start) + ' to ' + str(end-2), fontsize=16, y=0.95, fontweight=700)
     plt.tight_layout()
     plt.show()
 
@@ -416,14 +424,14 @@ if (__name__ == "__main__"):
     data = getDataHayle()
     lda_model, corpus, id2word = buildModel(data)
 
-    df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
+    makeJupiterVis(lda_model, corpus, id2word)
 
-    makeWordsPerDocVisualization(df_dominant_topic, (2,5))
-
+    # df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
+    # makeWordsPerDocVisualization(df_dominant_topic, (2,5))
+    #
     # makeWordCloudVisualization(lda_model, 20, (2,2))
-
+    #
     # makeWordWeightImportanceVisualization(lda_model, data, (2,2))
-
-    #TODO:
+    #
     # sentences_chart(lda_model, corpus)
 
