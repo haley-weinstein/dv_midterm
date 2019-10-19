@@ -28,6 +28,7 @@ import spacy
 # Enable logging for gensim - optional
 import logging
 
+import joining_the_sheeple
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.ERROR)
 
@@ -264,7 +265,7 @@ def makeJupiterVis(lda_model, corpus, id2word):
     pyLDAvis.save_html(vis, 'LDA_Visualization.html')
 
 
-def makeWordsPerDocVisualization(df_dominant_topic, plotBreakup):
+def makeWordsPerDocVisualization(df_dominant_topic):
     """
     Makes a visualization for how many times dominant words show up in the various document in
     an LDA model.
@@ -296,7 +297,7 @@ def makeWordsPerDocVisualization(df_dominant_topic, plotBreakup):
         plt.show()
 
 
-def makeWordCloudVisualization(lda_model, words_in_cloud, plotBreakup):
+def makeWordCloudVisualization(lda_model, words_in_cloud):
     cloud = WordCloud(
         # stopwords=stop_words,
                       background_color='white',
@@ -328,7 +329,7 @@ def makeWordCloudVisualization(lda_model, words_in_cloud, plotBreakup):
         plt.show()
 
 
-def makeWordWeightImportanceVisualization(lda_model, data, plotBreakup):
+def makeWordWeightImportanceVisualization(lda_model, data):
     """
     Makes a visualization of the frequency and importance of each words in
     the lda topics.
@@ -415,6 +416,24 @@ def sentences_chart(lda_model, corpus, start = 0, end = 13):
     plt.show()
 
 
+#-----------------------------------------------------------------------
+#                 Topic Distribution as a Matrix
+#-----------------------------------------------------------------------
+def getLDATopicDistMatrix(lda_model, corpus):
+    """
+    Gets a matrix that is corpus.documents tall and
+    lda_model.num_topics wide where each entry is a specific
+    topics contribution to a specific document
+    """
+    topic_matrix = []
+    for doc in corpus:
+        topicScore = np.zeros(lda_model.num_topics)
+        for topic_percs, wordid_topics, wordid_phivalues in lda_model[doc]:
+            for tp, score in topic_percs:
+                topicScore[tp] = score
+        topic_matrix.append(topicScore)
+    return topic_matrix
+
 
 #-----------------------------------------------------------------------
 #                     Run Everything
@@ -424,14 +443,17 @@ if (__name__ == "__main__"):
     data = getDataHayle()
     lda_model, corpus, id2word = buildModel(data)
 
-    makeJupiterVis(lda_model, corpus, id2word)
+    mat = getLDATopicDistMatrix(lda_model, corpus)
+    joining_the_sheeple.cluster(mat, 6, data, "LDA Topics K-Means Clustering")
+
+    # makeJupiterVis(lda_model, corpus, id2word)
 
     # df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
-    # makeWordsPerDocVisualization(df_dominant_topic, (2,5))
+    # makeWordsPerDocVisualization(df_dominant_topic)
     #
-    # makeWordCloudVisualization(lda_model, 20, (2,2))
+    # makeWordCloudVisualization(lda_model, 20)
     #
-    # makeWordWeightImportanceVisualization(lda_model, data, (2,2))
+    # makeWordWeightImportanceVisualization(lda_model, data)
     #
     # sentences_chart(lda_model, corpus)
 
