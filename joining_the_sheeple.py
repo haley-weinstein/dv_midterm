@@ -6,7 +6,13 @@ from sklearn.cluster import KMeans
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
+from nltk.corpus import stopwords
+from sklearn.naive_bayes import MultinomialNB
+import time
+from sklearn.model_selection import train_test_split
 
+stop_words = stopwords.words('english')
+stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'I', 'a', 'A', 'if'])
 CATEGORIES = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
 
 
@@ -29,6 +35,14 @@ def l(text):
     args:
     text (string): the text from which to lemmatize"""
     return [WNL.lemmatize(t) for t in word_tokenize(text)]
+
+
+def remove_stopwords(text):
+    sentence = " "
+    for word in text.split():
+        if word.lower() not in stop_words and word.isalnum():
+            sentence += "{} ".format(word.lower())
+    return sentence
 
 
 def strip_newsgroup_header(text):
@@ -93,29 +107,40 @@ def create_vocab1(data):
     data.data = [strip_newsgroup_header(text) for text in data.data]
     data.data = [strip_newsgroup_footer(text) for text in data.data]
     data.data = [strip_newsgroup_quoting(text) for text in data.data]
+    data.data = [remove_stopwords(text) for text in data.data]
+    print(data.data[0])
     # data.data = [l(text) for text in data.data]
     return data
 
 
-def create_vocabularies_BOW(data):
+def create_vocabularies_BOW(data, test=False):
     """Bag of Words model
     Args:
         data (obj): 20newsgroup object
     """
     count_vect_1 = CountVectorizer()  # vocabulary 1
-    X = count_vect_1.fit_transform(data.data)
+    Y = []
+    if test:
+        X = count_vect_1.fit_transform(data.data)
+        Y = count_vect_1.transform(test.data)
+    else:
+        X = count_vect_1.fit_transform(data.data)
+    return X, Y
 
-    return X
 
-
-def create_vocabularies_tfidf(data):
+def create_vocabularies_tfidf(data, test=None):
     """TFIDF model
     Args:
         data (obj): 20newsgroup object
     """
     vectorizer = TfidfVectorizer()
-    X = vectorizer.fit_transform(data.data)
-    return X
+    Y = []
+    if test:
+        X = vectorizer.fit_transform(data.data)
+        Y = vectorizer.transform(test.data)
+    else:
+        X = vectorizer.fit_transform(data.data)
+    return X, Y
 
 
 def cluster(X, number_of_categories, data, name):
@@ -133,25 +158,41 @@ def cluster(X, number_of_categories, data, name):
     print("Completeness: %0.3f" % metrics.completeness_score(data.target, km.labels_))
     print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
 
-def trainModels(vocab1, vocab2, train):
-    bow = create_vocabularies_BOW(vocab1)
-    cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
 
-    bow2 = create_vocabularies_BOW(vocab2)
-    cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+def train_(X_train, X_test, y_train, y_test):
+    start = time.time()
+    classifier = MultinomialNB()
+    classifier.fit(X_train, y_train)
+    end = time.time()
 
-    tf_idf = create_vocabularies_tfidf(vocab1)
-    cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+    print("Accuracy: " + str(classifier.score(X_test, y_test)) + ", Time duration: " + str(end - start))
+    return classifier
 
-    tf_idf2 = create_vocabularies_tfidf(vocab2)
-    cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-if (__name__ == "__main__"):
-    # EXAMPLE:
-    train, test = fetch_data()
-    vocab1 = create_vocab1(train)
-    vocab2 = train
-    trainModels(vocab1, vocab2, train)
+# EXAMPLE:
+train, test = fetch_data()
+vocab2 = train
+vocab2_test = test
+vocab1 = create_vocab1(train)
+vocab1_test = create_vocab1(test)
+
+# bow = create_vocabularies_BOW(vocab1)
+bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
+
+train_(bow, bow_test, vocab1.target, vocab1_test.target)
+cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
+# bow2 = create_vocabularies_BOW(vocab2)
+bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
+train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
+cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+
+tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
+train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
+cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+
+tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
+train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
+cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 """
 IGNORE THIS WAS TRYING SOMETHING DIDN'T REALLY WORK 
