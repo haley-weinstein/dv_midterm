@@ -6,7 +6,10 @@ from sklearn.cluster import KMeans
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
+from nltk.corpus import stopwords
 
+stop_words = stopwords.words('english')
+stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'I', 'a', 'A', 'if'])
 CATEGORIES = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
 
 
@@ -29,6 +32,14 @@ def l(text):
     args:
     text (string): the text from which to lemmatize"""
     return [WNL.lemmatize(t) for t in word_tokenize(text)]
+
+
+def remove_stopwords(text):
+    sentence = " "
+    for word in text.split():
+        if word.lower() not in stop_words and word.isalnum():
+            sentence += "{} ".format(word.lower())
+    return sentence
 
 
 def strip_newsgroup_header(text):
@@ -93,6 +104,8 @@ def create_vocab1(data):
     data.data = [strip_newsgroup_header(text) for text in data.data]
     data.data = [strip_newsgroup_footer(text) for text in data.data]
     data.data = [strip_newsgroup_quoting(text) for text in data.data]
+    data.data = [remove_stopwords(text) for text in data.data]
+    # print(data.data[0])
     # data.data = [l(text) for text in data.data]
     return data
 
@@ -104,7 +117,6 @@ def create_vocabularies_BOW(data):
     """
     count_vect_1 = CountVectorizer()  # vocabulary 1
     X = count_vect_1.fit_transform(data.data)
-
     return X
 
 
@@ -134,19 +146,22 @@ def cluster(X, number_of_categories, data, name):
     print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
 
 
-#EXAMPLE:
+# EXAMPLE:
 train, test = fetch_data()
+vocab2 = train
 vocab1 = create_vocab1(train)
+
 bow = create_vocabularies_BOW(vocab1)
 cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
 
-bow2 = create_vocabularies_BOW(train)
+bow2 = create_vocabularies_BOW(vocab2)
+
 cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
 tf_idf = create_vocabularies_tfidf(vocab1)
 cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
-tf_idf2 = create_vocabularies_tfidf(train)
+tf_idf2 = create_vocabularies_tfidf(vocab2)
 cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 """
