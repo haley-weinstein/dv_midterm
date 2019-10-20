@@ -34,11 +34,11 @@ def json_zip(j, fp):
 
 
 NUMBER_OF_WORDS = 200
-PATH_TO_NEWS_GROUP = 'C:\\Users\\haleyweinstein\\Documents\\20_newsgroups'
+PATH_TO_NEWS_GROUP = 'C:\\Users\\Zacha\\Desktop\\20_newsgroups'
 
 
 class TotalCorp(object):
-    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_name='alt.atheism', b='51174', lemma=False):
+    def __init__(self, path_to_news_group=PATH_TO_NEWS_GROUP, folder_name='alt.atheism', b='51060', lemma=False):
         self.p = path_to_news_group
         self.folder = folder_name
         self.corpus = []
@@ -177,8 +177,8 @@ class TFIDF(object):
 aethism = TotalCorp()
 aethism.create_corp()
 
-bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['comma_seperated_words'])
-bag_aethism.create_sentence_vectors()
+# bag_aethism = BagOfWords(aethism.corpus, aethism.word_freq_dict['comma_seperated_words'])
+# bag_aethism.create_sentence_vectors()
 """
 for c in os.listdir(PATH_TO_NEWS_GROUP):
     print(c)
