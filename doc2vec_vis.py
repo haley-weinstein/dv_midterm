@@ -16,9 +16,6 @@ model = d2v.Doc2Vec.load(fn)
 fn = sys.argv[2]
 model2 = d2v.Doc2Vec.load(fn)
 
-# load kmeans
-kmeans = joblib.load('d2v_kmeans.joblib')
-
 # gets words mose similar to a word, sorted by similarity
 # takes string input
 def get_most_similar(word):

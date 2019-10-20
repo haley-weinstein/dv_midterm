@@ -270,7 +270,7 @@ def create_vocabularies_tfidf(data, test=None):
     return X, Y
 
 
-def cluster(X, number_of_categories, target, name):
+def cluster(X, number_of_categories, data, name):
     """Performs k means clustering and prints homogeneity completeness and v measure
     Args:
         X (data): modeled data
@@ -281,7 +281,7 @@ def cluster(X, number_of_categories, target, name):
     km = KMeans(n_clusters=5, init='k-means++', max_iter=100, n_init=1)
     km.fit(X)
     print(name)
-    print("NMI: %0.3f" % normalized_mutual_info_score(target, km.labels_))
+    print("NMI: %0.3f" % normalized_mutual_info_score(data.target, km.labels_))
 
 
 def train_(X_train, X_test, y_train, y_test):
@@ -347,6 +347,7 @@ def make_example(train, test):
         cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 
+
 def wordcloud(vocab1, vocab2):
     wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
     plt.imshow(wordcloud)
@@ -360,6 +361,7 @@ if (__name__ == '__main__'):
     train, test = fetch_data()
     make_example(train, test)
 
+train, test = fetch_data()
 vocab2, vocab2_test = fetch_data()
 vocab1 = create_vocab1(train)
 vocab1_test = create_vocab1(test)

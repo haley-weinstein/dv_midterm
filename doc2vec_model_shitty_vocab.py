@@ -20,11 +20,11 @@ def create_tagged_documents(vocab):
 
 
 # word dict contains tokenized list of words, with key = filename of doc
-train_data = create_tagged_documents(vcb.vocab1)
+train_data = create_tagged_documents(vcb.vocab2)
 # Init the Doc2Vec model
 # uses different training algorithm (different training method for report)
 model = gensim.models.doc2vec.Doc2Vec(train_data, vector_size=5, min_count=5, epochs=20, dm=1)
 
-# save model so we dont have to wait a year retrain when testin visualizations
+# save model so we dont have to wait a year retrain when testing visualizations
 model.save("C:\\Users\\Zacha\\PycharmProjects\\dv_midterm\\d2v_badvocab.model")
 model_stored = gensim.models.doc2vec.Doc2Vec.load("C:\\Users\\Zacha\\PycharmProjects\\dv_midterm\\d2v_badvocab.model")
