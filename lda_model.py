@@ -53,10 +53,7 @@ stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 #-----------------------------------------------------------------------
 
 def getDataHayle(getTrain):
-    if getTrain:
-        dats = joining_the_sheeple.fetch_data()[0]
-    else:
-        dats = joining_the_sheeple.fetch_data()[1]
+    dats = joining_the_sheeple.fetch_data()[0]
     sentences = list(sent_to_words(dats.data))
 
     target = []
@@ -355,17 +352,13 @@ def getLDATopicDistMatrix(lda_model, corpus, data):
 #-----------------------------------------------------------------------
 
 if (__name__ == "__main__"):
-    data, target = getDataHayle(True)
-    dataTest, targetTest = getDataHayle(False)
+    data, target = getDataHayle()
 
     lda_model, corpus, id2word = buildModel(data)
-    lda_model_test, corpus_test, id2word_test = buildModel(dataTest)
 
     mat = getLDATopicDistMatrix(lda_model, corpus, data)
-    matTest = getLDATopicDistMatrix(lda_model_test, corpus_test, dataTest)
 
     joining_the_sheeple.cluster(mat, 5, target, "LDA Topics K-Means Clustering")
-    joining_the_sheeple.train_(mat, matTest, target, targetTest)
 
     makeJupiterVis(lda_model, corpus, id2word)
 
