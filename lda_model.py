@@ -1,8 +1,8 @@
 """
+Based on tutorials at:
 https://www.machinelearningplus.com/nlp/topic-modeling-gensim-python/
 https://www.machinelearningplus.com/nlp/topic-modeling-visualization-how-to-present-results-lda-models/
 """
-
 
 # -----------------------------------------------------------------
 #                        Import Packages
@@ -16,28 +16,10 @@ from pprint import pprint
 # Gensim
 import gensim
 import gensim.corpora as corpora
-from gensim.utils import simple_preprocess
 from gensim.models import CoherenceModel
 
-# spacy for lemmatization
-import spacy
-
-# Plotting tools
-#%matplotlib inline
-
-# Enable logging for gensim - optional
-import logging
-
-import joining_the_sheeple
-
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.ERROR)
-
-import warnings
-warnings.filterwarnings("ignore",category=DeprecationWarning)
-
-
 #Getting parsed data
-from joining_the_sheeple import fetch_data, create_vocab1
+import joining_the_sheeple
 
 #Packages for jupiter visualization
 import pyLDAvis
@@ -60,12 +42,10 @@ from matplotlib.patches import Rectangle
 import matplotlib.colors as mcolors
 cols = [color for name, color in mcolors.TABLEAU_COLORS.items()]
 
-
 # NLTK Stop words
 from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
-
 
 
 #-----------------------------------------------------------------------
@@ -74,9 +54,9 @@ stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 
 def getDataHayle(getTrain):
     if getTrain:
-        dats = fetch_data()[0]
+        dats = joining_the_sheeple.fetch_data()[0]
     else:
-        dats = fetch_data()[1]
+        dats = joining_the_sheeple.fetch_data()[1]
     sentences = list(sent_to_words(dats.data))
 
     target = []
@@ -87,82 +67,6 @@ def getDataHayle(getTrain):
             target.append(dats.target[i])
 
     return data, joining_the_sheeple.create_new_labels(target)
-
-
-def getDataMe():
-    """
-    Get and parse newsgroup data according to tutorial
-    """
-
-    # Read the 20 newsgroup data from a github
-    df = pd.read_json('https://raw.githubusercontent.com/selva86/datasets/master/newsgroups.json')
-
-
-    #  Remove Emails and New Line Chars
-
-    # Convert to list
-    data = df.content.values.tolist()
-
-    # Remove Emails
-    data = [re.sub('\S*@\S*\s?', '', sent) for sent in data]
-
-    # Remove new line characters
-    data = [re.sub('\s+', ' ', sent) for sent in data]
-
-    # Remove distracting single quotes
-    data = [re.sub("\'", "", sent) for sent in data]
-
-    data_words = list(sent_to_words(data))
-
-
-    # Build bigram and trigram models
-
-    # Build the bigram and trigram models
-    bigram = gensim.models.Phrases(data_words, min_count=5, threshold=100) # higher threshold fewer phrases.
-    trigram = gensim.models.Phrases(bigram[data_words], threshold=100)
-
-    # Faster way to get a sentence clubbed as a trigram/bigram
-    bigram_mod = gensim.models.phrases.Phraser(bigram)
-    trigram_mod = gensim.models.phrases.Phraser(trigram)
-
-
-    # Do Lemmatization
-
-
-    # Define functions for stopwords, bigrams, trigrams and lemmatization
-    def remove_stopwords(texts):
-        return [[word for word in simple_preprocess(str(doc)) if word not in stop_words] for doc in texts]
-
-    def make_bigrams(texts):
-        return [bigram_mod[doc] for doc in texts]
-
-    def make_trigrams(texts):
-        return [trigram_mod[bigram_mod[doc]] for doc in texts]
-
-    def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
-        texts_out = []
-        for sent in texts:
-            doc = nlp(" ".join(sent))
-            texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
-        return texts_out
-
-
-    #  Call Functions
-
-    # Remove Stop Words
-    data_words_nostops = remove_stopwords(data_words)
-
-    # Form Bigrams
-    data_words_bigrams = make_bigrams(data_words_nostops)
-
-    # Initialize spacy 'en' model, keeping only tagger component (for efficiency)
-    # python3 -m spacy download en
-    nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
-
-    # Do lemmatization keeping only noun, adj, vb, adv
-    data_lemmatized = lemmatization(data_words_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
-
-    return data_lemmatized
 
 
 def sent_to_words(sentences):
@@ -463,16 +367,16 @@ if (__name__ == "__main__"):
     joining_the_sheeple.cluster(mat, 5, target, "LDA Topics K-Means Clustering")
     joining_the_sheeple.train_(mat, matTest, target, targetTest)
 
-    # makeJupiterVis(lda_model, corpus, id2word)
-    #
-    # printLDAStats(lda_model, corpus)
-    #
-    # df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
-    # makeWordsPerDocVisualization(df_dominant_topic)
-    #
-    # makeWordCloudVisualization(lda_model, 20)
-    #
-    # makeWordWeightImportanceVisualization(lda_model, data)
-    #
-    # sentences_chart(lda_model, corpus)
+    makeJupiterVis(lda_model, corpus, id2word)
+
+    printLDAStats(lda_model, corpus)
+
+    df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
+    makeWordsPerDocVisualization(df_dominant_topic)
+
+    makeWordCloudVisualization(lda_model, 20)
+
+    makeWordWeightImportanceVisualization(lda_model, data)
+
+    sentences_chart(lda_model, corpus)
 
