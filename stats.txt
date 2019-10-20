@@ -1,0 +1,7 @@
+Number of Books: 2 
+Number of Documents: 11 
+Total Words: 3156  
+Average Sentence Length: 19.64037987398411 
+Standard Deviation: 20.097682974107837 
+Max: 227 
+Min: 0 
