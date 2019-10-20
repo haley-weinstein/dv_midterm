@@ -9,12 +9,101 @@ import re
 from nltk.corpus import stopwords
 from sklearn.naive_bayes import MultinomialNB
 import time
-import nltk
+from wordcloud import WordCloud, STOPWORDS
+import numpy as np
+from sklearn.metrics.cluster import normalized_mutual_info_score
+from sklearn.utils.multiclass import unique_labels
+
+from sklearn.metrics import confusion_matrix
+from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+import warnings
+
+warnings.filterwarnings("ignore")
+
+
+def plot_confusion_matrix(y_true, y_pred,
+                          normalize=False,
+                          title=None,
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if not title:
+        if normalize:
+            title = 'Normalized confusion matrix'
+        else:
+            title = 'Confusion matrix, without normalization'
+
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    labels = ['Religion', 'Comp', 'Rec', 'Science', 'Politics']
+    # Only use the labels that appear in the data
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    fig, ax = plt.subplots()
+    fig.tight_layout()
+    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    ax.figure.colorbar(im, ax=ax)
+    # We want to show all ticks...
+    ax.set(xticks=np.arange(cm.shape[1]),
+           yticks=np.arange(cm.shape[0]),
+           # ... and label them with the respective list entries
+
+           title=title,
+           ylabel='True label',
+           xlabel='Predicted label')
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+
+    # Loop over data dimensions and create text annotations.
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, format(cm[i, j], fmt),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.show()
+    return ax
+
 
 stop_words = stopwords.words('english')
 stop_words.extend(['from', 'subject', 're', 'edu', 'use', 'I', 'a', 'A', 'if'])
-CATEGORIES = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
+CATEGORIES = ['alt.atheism',
+              'comp.graphics',
+              'comp.os.ms-windows.misc',
+              'comp.sys.ibm.pc.hardware',
+              'comp.sys.mac.hardware',
+              'comp.windows.x',
+              'misc.forsale',
+              'rec.autos',
+              'rec.motorcycles',
+              'rec.sport.baseball',
+              'rec.sport.hockey',
+              'sci.crypt',
+              'sci.electronics',
+              'sci.med',
+              'sci.space',
+              'soc.religion.christian',
+              'talk.politics.guns',
+              'talk.politics.mideast',
+              'talk.politics.misc',
+              'talk.religion.misc']
 
 
 def fetch_data(categories=CATEGORIES):
@@ -38,11 +127,25 @@ def l(text):
     return [WNL.lemmatize(t) for t in word_tokenize(text)]
 
 
-def remove_stopwords(text):
+class S(object):
+    def __init__(self, wc):
+        print("lets get this stats boi")
+        self.wordcount = wc
+        self.wordcount_processed = []
+        self.sentence_count = 0
+
+
+def remove_stopwords(text, stats):
+    total_words = 0
     sentence = " "
+    proc = 0
     for word in text.split():
         if word.lower() not in stop_words and word.isalnum():
             sentence += "{} ".format(word.lower())
+            proc = proc + 1
+        total_words += 1
+    stats.wordcount.append(total_words)
+    stats.wordcount_processed.append(proc)
     return sentence
 
 
@@ -105,12 +208,35 @@ def create_vocab1(data):
     """creates vocabulary one with stripped header footer and quoting and hopefully lemmatizing in the future
     Args (obj): 20newsgroup data
     """
+    stats = S(wc=[])
     data.data = [strip_newsgroup_header(text) for text in data.data]
     data.data = [strip_newsgroup_footer(text) for text in data.data]
     data.data = [strip_newsgroup_quoting(text) for text in data.data]
-    data.data = [remove_stopwords(text) for text in data.data]
-    print(data.data[0])
-    # data.data = [l(text) for text in data.data]
+    data.data = [remove_stopwords(text, stats) for text in data.data]
+    plt.close()
+    plt.hist(stats.wordcount, bins=20)
+    print("number of Categories {}".format(len(data.data)))
+    print("STD {}".format(np.std(np.array(stats.wordcount))))
+    print("Mean {}".format(np.mean(np.array(stats.wordcount))))
+    print("STD pre{}".format(np.std(np.array(stats.wordcount_processed))))
+    print("Mean pre{}".format(np.mean(np.array(stats.wordcount_processed))))
+    plt.title('Histogram of Wordcount per Document')
+    plt.savefig('histogram.png')
+    plt.close()
+    plt.plot(range(len(data.data)), stats.wordcount)
+
+    plt.title('Word Count vs. Document Number')
+    plt.xlabel('Document Number')
+    plt.ylabel('Word Count')
+    plt.savefig('wordcount.png')
+    plt.close()
+    plt.plot(range(len(data.data)), stats.wordcount)
+    plt.plot(range(len(data.data)), stats.wordcount_processed)
+    plt.title('Word Count vs. Document Number Before and After Pre-Processing')
+    plt.legend(['Original', 'Pre Processed'])
+    plt.xlabel('Document Number')
+    plt.ylabel('Word Count')
+    plt.savefig('wordcount2.png')
     return data
 
 
@@ -152,12 +278,10 @@ def cluster(X, number_of_categories, data, name):
         data (obj): 20newsgroup object
         name (string): name to print out
     """
-    km = KMeans(n_clusters=number_of_categories, init='k-means++', max_iter=100, n_init=1)
+    km = KMeans(n_clusters=6, init='k-means++', max_iter=100, n_init=1)
     km.fit(X)
     print(name)
-    print("Homogeneity: %0.3f" % metrics.homogeneity_score(data.target, km.labels_))
-    print("Completeness: %0.3f" % metrics.completeness_score(data.target, km.labels_))
-    print("V-measure: %0.3f" % metrics.v_measure_score(data.target, km.labels_))
+    print("NMI: %0.3f" % normalized_mutual_info_score(data.target, km.labels_))
 
 
 def train_(X_train, X_test, y_train, y_test):
@@ -165,65 +289,73 @@ def train_(X_train, X_test, y_train, y_test):
     classifier = MultinomialNB()
     classifier.fit(X_train, y_train)
     end = time.time()
-
+    predicted = classifier.predict(X_test)
+    confusion_matrix(predicted, y_test)
+    plot_confusion_matrix(y_test, predicted)
     print("Accuracy: " + str(classifier.score(X_test, y_test)) + ", Time duration: " + str(end - start))
     return classifier
 
 
+def create_new_labels(labels):
+    new_labels = []
+    for c in labels:
+        if c == 0 or c == 19 or c == 15:
+            """religion"""
+            new_labels.append(1)
+        elif c <= 5 and c >= 1:
+            new_labels.append(2)
+        elif c >= 7 and c <= 10:
+            new_labels.append(4)
+        elif c >= 11 and c <= 14:
+            new_labels.append(5)
+        else:
+            new_labels.append(3)
+    return new_labels
+
+
 # EXAMPLE:
-train, test = fetch_data()
-vocab2 = train
-vocab2_test = test
-vocab1 = create_vocab1(train)
-vocab1_test = create_vocab1(test)
+def make_example(train, test):
+    vocab2, vocab2_test = fetch_data()
+    vocab1 = create_vocab1(train)
+    vocab1_test = create_vocab1(test)
+    vocab2.target = create_new_labels(vocab2.target)
+    vocab1.target = create_new_labels(vocab1.target)
+    vocab2_test.target = create_new_labels(vocab2_test.target)
+    vocab1_test.target = create_new_labels(vocab1_test.target)
+    cluster_ = True
+    if cluster_:
+        # bow = create_vocabularies_BOW(vocab1)
+        bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
 
-# bow = create_vocabularies_BOW(vocab1)
-bow, bow_test = create_vocabularies_BOW(vocab1, test=vocab1_test)
+        print('Multinomial Naive Bayes: BOW Vocab1')
+        train_(bow, bow_test, vocab1.target, vocab1_test.target)
+        cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
+        # bow2 = create_vocabularies_BOW(vocab2)
+        bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
+        print('Multinomial Naive Bayes: BOW Vocab2')
+        train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
+        cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
 
-train_(bow, bow_test, vocab1.target, vocab1_test.target)
-cluster(bow, len(CATEGORIES), train, "BOW VOCAB 1")
-# bow2 = create_vocabularies_BOW(vocab2)
-bow2, bow2_test = create_vocabularies_BOW(vocab2, test=vocab2_test)
-train_(bow2, bow2_test, vocab2.target, vocab2_test.target)
-cluster(bow2, len(CATEGORIES), train, "BOW VOCAB 2")
+        tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
+        print('Multinomial Naive Bayes: TFIDF Vocab1')
+        train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
+        cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
 
-tf_idf, tfidf_test = create_vocabularies_tfidf(vocab1, test=vocab1_test)
-train_(tf_idf, tfidf_test, vocab1.target, vocab1_test.target)
-cluster(tf_idf, len(CATEGORIES), train, "TFIDF VOCAB 1")
+        tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
+        print('Multinomial Naive Bayes: TFIDF Vocab2')
+        train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
+        cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-tf_idf2, tfidf2_test = create_vocabularies_tfidf(vocab2, test=vocab2_test)
-train_(tf_idf2, tfidf2_test, vocab2.target, vocab2_test.target)
-cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
-"""
-IGNORE THIS WAS TRYING SOMETHING DIDN'T REALLY WORK 
-kmeans1 = KMeans(n_clusters=4).fit_transform(X_train_counts_1, twenty_train.target)
-kmeans2 = KMeans(n_clusters=4).fit_transform(X_train_counts_2, twenty_train.target)
-clf = MultinomialNB(alpha=.01)
-clf.fit(X_train_counts_1, twenty_train.target)
-predicted = clf.predict(X_test_counts_1)
-mat = confusion_matrix(twenty_train.test, predicted)
-# print(mat)
-sns.heatmap(mat.T)
-"""
+def wordcloud(vocab1, vocab2):
+    wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
+    plt.imshow(wordcloud)
+    wordcloud2 = WordCloud().generate_from_text(' '.join(vocab2.data[0:1000]))
+    plt.show()
+    plt.imshow(wordcloud2)
+    plt.show()
 
-"""
-plt.xlabel('true label')
-plt.ylabel('predicted label')
-plt.show()
-# TFIDF
-from sklearn.feature_extraction.text import TfidfTransformer
-tf_transformer = TfidfTransformer(use_idf=True).fit(X_train_counts_1)
-X_train_tf = tf_transformer.transform(X_train_counts_1)
-tf_transformer = TfidfTransformer(use_idf=True).fit(X_train_counts_2)
-X_train_tf2 = tf_transformer.transform(X_train_counts_2)
-kmeans1_tf = KMeans(n_clusters=4).fit(X_train_tf, twenty_train.target)
-kmeans2_tf = KMeans(n_clusters=4).fit(X_train_tf2, twenty_train.target)
-mat = confusion_matrix(twenty_train.target, kmeans1_tf.labels_)
-sns.heatmap(mat.T,
-            xticklabels=twenty_test.target_names,
-            yticklabels=twenty_test.target_names)
-plt.xlabel('true label')
-plt.ylabel('predicted label')
-plt.show()
-"""
+
+if (__name__ == '__main__'):
+    train, test = fetch_data()
+    make_example(train, test)
