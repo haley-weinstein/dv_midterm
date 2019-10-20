@@ -1,7 +1,7 @@
 """
 Author: Hayle
-Description: Preprocess some shit idk
-fuck this I put EFFORT in but guess we will j b sheeple who use tutorials
+Description: Preprocess some stuff idk
+I put EFFORT in but guess we will j b sheeple who use tutorials
 """
 import nltk
 import heapq
@@ -61,7 +61,7 @@ class TotalCorp(object):
             self.word_freq_dict[f]['frequencies'], self.word_freq_dict[f]['total_words'], self.word_freq_dict[
                 f]['comma_seperated_words'], self.word_freq_dict[f]['sentence_vectors'] = self.find_frequency()
             # _, _, _, self.word_freq_dict[f]['sentence)vectors'] = self.find_frequency()
-            if str(f) == self.break_at:  # it takes a really fucking long time to run so I j did this
+            if str(f) == self.break_at:  # it takes a really long time to run so I j did this
                 break
 
     def save(self):
