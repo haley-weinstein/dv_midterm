@@ -347,6 +347,7 @@ def make_example(train, test):
         cluster(tf_idf2, len(CATEGORIES), train, "TFIDF VOCAB 2")
 
 
+
 def wordcloud(vocab1, vocab2):
     wordcloud = WordCloud().generate_from_text(' '.join(vocab1.data[0:1000]))
     plt.imshow(wordcloud)
@@ -359,3 +360,12 @@ def wordcloud(vocab1, vocab2):
 if (__name__ == '__main__'):
     train, test = fetch_data()
     make_example(train, test)
+
+train, test = fetch_data()
+vocab2, vocab2_test = fetch_data()
+vocab1 = create_vocab1(train)
+vocab1_test = create_vocab1(test)
+vocab2.target = create_new_labels(vocab2.target)
+vocab1.target = create_new_labels(vocab1.target)
+vocab2_test.target = create_new_labels(vocab2_test.target)
+vocab1_test.target = create_new_labels(vocab1_test.target)
