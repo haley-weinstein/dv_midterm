@@ -72,9 +72,21 @@ stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 #                  Get data for LDA
 #-----------------------------------------------------------------------
 
-def getDataHayle():
-    sentences = list(sent_to_words(create_vocab1(fetch_data()[0]).data))
-    return [l for l in sentences if l]
+def getDataHayle(getTrain):
+    if getTrain:
+        dats = fetch_data()[0]
+    else:
+        dats = fetch_data()[1]
+    sentences = list(sent_to_words(dats.data))
+
+    target = []
+    data = []
+    for i in range(0, len(sentences)):
+        if sentences[i]:
+            data.append(sentences[i])
+            target.append(dats.target[i])
+
+    return data, joining_the_sheeple.create_new_labels(target)
 
 
 def getDataMe():
@@ -419,7 +431,7 @@ def sentences_chart(lda_model, corpus, start = 0, end = 13):
 #-----------------------------------------------------------------------
 #                 Topic Distribution as a Matrix
 #-----------------------------------------------------------------------
-def getLDATopicDistMatrix(lda_model, corpus):
+def getLDATopicDistMatrix(lda_model, corpus, data):
     """
     Gets a matrix that is corpus.documents tall and
     lda_model.num_topics wide where each entry is a specific
@@ -428,9 +440,8 @@ def getLDATopicDistMatrix(lda_model, corpus):
     topic_matrix = []
     for doc in corpus:
         topicScore = np.zeros(lda_model.num_topics)
-        for topic_percs, wordid_topics, wordid_phivalues in lda_model[doc]:
-            for tp, score in topic_percs:
-                topicScore[tp] = score
+        for tp, score in lda_model[doc][0]:
+            topicScore[tp] = score
         topic_matrix.append(topicScore)
     return topic_matrix
 
@@ -440,14 +451,22 @@ def getLDATopicDistMatrix(lda_model, corpus):
 #-----------------------------------------------------------------------
 
 if (__name__ == "__main__"):
-    data = getDataHayle()
-    lda_model, corpus, id2word = buildModel(data)
+    data, target = getDataHayle(True)
+    dataTest, targetTest = getDataHayle(False)
 
-    mat = getLDATopicDistMatrix(lda_model, corpus)
-    joining_the_sheeple.cluster(mat, 6, data, "LDA Topics K-Means Clustering")
+    lda_model, corpus, id2word = buildModel(data)
+    lda_model_test, corpus_test, id2word_test = buildModel(dataTest)
+
+    mat = getLDATopicDistMatrix(lda_model, corpus, data)
+    matTest = getLDATopicDistMatrix(lda_model_test, corpus_test, dataTest)
+
+    joining_the_sheeple.cluster(mat, 5, target, "LDA Topics K-Means Clustering")
+    joining_the_sheeple.train_(mat, matTest, target, targetTest)
 
     # makeJupiterVis(lda_model, corpus, id2word)
-
+    #
+    # printLDAStats(lda_model, corpus)
+    #
     # df_dominant_topic = format_topics_sentences(lda_model, corpus, data)
     # makeWordsPerDocVisualization(df_dominant_topic)
     #
